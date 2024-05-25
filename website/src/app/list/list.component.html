@@ -1,0 +1,5 @@
+<input [(ngModel)]="newNoteContent" placeholder="Enter note">
+<button (click)="addNote(this.newNoteContent)">Add</button>
+<div *ngFor="let note of notes">
+    {{ note.note }}
+</div>

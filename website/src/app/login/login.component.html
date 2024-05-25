@@ -1,0 +1,6 @@
+<p>To login, enter your email address and Submit.  This will generate a login link to the supplied address.</p>
+<div>
+    <input type="email" placeholder="Enter your email" [(ngModel)]="email">
+    <button (click)="submitEmail()" [disabled]="isLoading">Submit<img *ngIf="isLoading" src="assets/img/bars.svg" alt="Loading..."></button>
+</div>
+<p>{{ responseData }}</p>
