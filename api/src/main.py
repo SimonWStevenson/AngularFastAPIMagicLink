@@ -1,5 +1,5 @@
 from functools import lru_cache
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import create_engine
 from . import database, security, config
@@ -11,15 +11,12 @@ def get_settings():
 
 app = FastAPI(debug=True)
 myapi = FastAPI(debug=True)
+settings = get_settings()
 
 # CORSMiddleware
-origins = [
-    get_settings().website_url
-]
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=[settings.website_url],
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE"],
     allow_headers=["Authorization", "Content-Type"],
@@ -45,8 +42,8 @@ def login(email: str):
     return security.login(email)
 
 @myapi.get("/verify")
-def verify(user_token: str, email: str):
-    redirect_response = security.verify(user_token, email)
+def verify(request: Request, user_token: str, email: str):
+    redirect_response = security.verify(request=request, user_token=user_token, email=email)
     return redirect_response
 
 @myapi.get("/authenticated")

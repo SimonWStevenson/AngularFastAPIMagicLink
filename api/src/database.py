@@ -6,6 +6,7 @@ Session = sessionmaker(bind=engine)
 
 def setupDatabase():
     with Session() as session:
+        #session.execute(text("drop table if exists sessions;"))
         #session.execute(text("drop table if exists notes;"))
         #session.execute(text("drop table if exists user;"))
         session.execute(text(
@@ -15,7 +16,6 @@ def setupDatabase():
             , email varchar not null unique
             , created_date datetime default current_timestamp
             , user_token text
-            , session_token text
             );
             """
         ))
@@ -26,6 +26,29 @@ def setupDatabase():
             , note text
             , created_date datetime default current_timestamp
             , user_id integer
+            , foreign key (user_id) references user(id) on delete cascade
+            );
+            """
+            # ON DELETE CASCADE: Ensures that if a user is deleted, all associated notes are also deleted.
+        ))
+
+        session.execute(text(
+            """
+            create table if not exists sessions (
+            id integer primary key
+            , created_date datetime default current_timestamp
+            , user_id integer
+            , browser text
+            , browser_version text
+            , os text
+            , os_version text
+            , device text
+            , device_brand text
+            , device_model text
+            , is_mobile integer
+            , is_tablet integer
+            , is_pc integer
+            , is_bot integer
             , foreign key (user_id) references user(id) on delete cascade
             );
             """
@@ -76,7 +99,8 @@ def expireUserToken(email):
         if result.rowcount > 0:
             print("User token expired successfully.")
         else:
-            print("Something went wrong")
+            session.rollback()
+            raise
         return
 
 def setUserToken(email, user_token):
@@ -97,23 +121,48 @@ def setUserToken(email, user_token):
             raise            
     return
 
-def setSessionToken(email, session_token):
+def setSessionToken(user_id, device_info):
     with Session() as session:
         try:
             sql = """
-                update user 
-                set session_token = :session_token
-                where email = :email
+                insert into sessions (user_id, browser, browser_version, os, os_version, device, device_brand, device_model, is_mobile, is_tablet, is_pc, is_bot)
+                values (:user_id, :browser, :browser_version, :os, :os_version, :device, :device_brand, :device_model, :is_mobile, :is_tablet, :is_pc, :is_bot)
+                returning *
                 """
-            session.execute(text(sql), {
-                'email': email,
-                'session_token': session_token,
-            })
+            result = session.execute(text(sql), {
+                'user_id': user_id,
+                'browser': device_info['browser'],
+                'browser_version': device_info['browser_version'],
+                'os': device_info['os'],
+                'os_version': device_info['os_version'],
+                'device': device_info['device'],
+                'device_brand': device_info['device_brand'],
+                'device_model': device_info['device_model'],
+                'is_mobile': device_info['is_mobile'],
+                'is_tablet': device_info['is_tablet'],
+                'is_pc': device_info['is_pc'],
+                'is_bot': device_info['is_bot'],
+            }).mappings().fetchone()
             session.commit()
+            return result
         except:
             session.rollback()
             raise            
-    return
+
+def getSessionToken(email, session_id):
+    with Session() as session:
+        sql = """
+            select s.* from user u
+            inner join sessions s on u.id = s.user_id
+            where 
+                u.email = :email 
+                and s.id = :session_id
+            """
+        result = session.execute(text(sql), {'email': email, 'session_id': session_id}).mappings().fetchone()
+        if result:
+            return result
+        else:
+            return None
 
 ########################################################################
 # Note
