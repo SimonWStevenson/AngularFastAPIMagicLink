@@ -1,15 +1,14 @@
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Note } from './note';
-import { Observable, catchError, map, of, tap } from 'rxjs';
+import { Observable } from 'rxjs';
+import { Session } from './session';
 
 @Injectable({
   providedIn: 'root'
 })
-
-export class ListService {
+export class SessionsService {
   readonly ROOT_URL = 'http://localhost:8086/api';
-  readonly notesURL = '/notes/';
+  readonly sessionUrl = '/session';
   httpOptions = {
     headers: new HttpHeaders({ 
       'Content-Type': 'application/json',
@@ -18,20 +17,17 @@ export class ListService {
   };
 
   constructor(private http: HttpClient) {}
-
-  getNotes(): Observable<Note[]> {
-    let url = this.ROOT_URL + this.notesURL
+  getSessions(): Observable<Session[]> {
+    let url = this.ROOT_URL + this.sessionUrl
     let options = this.httpOptions
-    let response = this.http.get<Note[]>(url, options)
+    let response = this.http.get<Session[]>(url, options)
     return response
   }
 
-  addNote(note: string): Observable<Note>{
-    let url = this.ROOT_URL + this.notesURL + '?note=' + note
-    let body = note
+  closeSession(session_id: number): Observable<Session>{
+    let url = this.ROOT_URL + this.sessionUrl + '?session_id=' + session_id
     let options = this.httpOptions
-    let response = this.http.post<Note>(url, body, options)
+    let response = this.http.delete<Session>(url, options)
     return response
   }
-
 }

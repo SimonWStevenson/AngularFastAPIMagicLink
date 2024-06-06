@@ -15,7 +15,7 @@ export class UnauthInterceptor implements HttpInterceptor {
         if (error.status === 400 || error.status === 401) {
           //console.error('Unauthorized request:', error);
           const errorMessage = error.error.detail || 'Something went wrong';
-          this.router.navigate(['/expired'], { queryParams: { message: errorMessage } });
+          this.router.navigate(['/login'], { queryParams: { message: errorMessage } });
         }
         return throwError(error);
       })

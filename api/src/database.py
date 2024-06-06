@@ -164,6 +164,39 @@ def getSessionToken(email, session_id):
         else:
             return None
 
+def getSessions(user_id, session_id):
+    with Session() as session:
+        sql = """
+            select 
+                u.email
+                , s.*
+                , case when s.id = :session_id then 1 else 0 end as is_this_session
+            from user u
+            inner join sessions s on u.id = s.user_id and u.id = :user_id
+            """
+        result = session.execute(text(sql), {'user_id': user_id, 'session_id': session_id}).mappings().fetchall()
+        if result:
+            return result
+        else:
+            return None
+
+def deleteSession(user_id, session_id):
+    with Session() as session:
+        try:
+            sql = """
+                delete from sessions where user_id = :user_id and id = :session_id
+                returning *
+                """
+            result = session.execute(text(sql), {
+                'user_id': user_id,
+                'session_id': session_id,
+            }).mappings().fetchone()
+            session.commit()
+            return result
+        except:
+            session.rollback()
+            raise
+
 ########################################################################
 # Note
 ########################################################################
@@ -172,7 +205,7 @@ def getNotes(current_user):
         sql = """
             select * from notes where user_id = :user_id
             """
-        result = session.execute(text(sql), {'user_id': current_user.id}).mappings().fetchall()
+        result = session.execute(text(sql), {'user_id': current_user.user_id}).mappings().fetchall()
         if result:
             return result
         else:
@@ -186,7 +219,7 @@ def addNote(note, current_user):
                 values (:note, :user_id)
                 returning *
                 """
-            result = session.execute(text(sql), {'note': note, 'user_id': current_user.id}).mappings().fetchone()
+            result = session.execute(text(sql), {'note': note, 'user_id': current_user.user_id}).mappings().fetchone()
             session.commit()
             return result
         except:

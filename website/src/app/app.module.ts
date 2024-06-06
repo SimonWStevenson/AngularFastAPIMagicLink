@@ -5,28 +5,29 @@ import { FormsModule } from '@angular/forms';
 import { HttpClientModule } from '@angular/common/http';
 
 import { AppComponent } from './app.component';
-import { LoginComponent } from './login/login.component';
-import { AuthenticatedComponent } from './authenticated/authenticated.component';
+import { SecurityComponent } from './security/security.component';
 
 import { HTTP_INTERCEPTORS } from '@angular/common/http';
-import { AuthInterceptor } from '../app/http-interceptors/auth-interceptor'; // Adjust the path as necessary
+import { AuthInterceptor } from '../app/http-interceptors/auth-interceptor';
 import { UnauthInterceptor } from '../app/http-interceptors/unauth-interceptor';
-import { ListComponent } from './list/list.component'; // Adjust the path as necessary
+import { ListComponent } from './list/list.component';
+import { SessionsComponent } from './sessions/sessions.component';
+import { HomeComponent } from './home/home.component';
+import { AuthGuard, LoginGuard } from './security/security.guard';
 
 const routes: Routes = [
-  { path: '', redirectTo: '/login', pathMatch: 'full' },
-  { path: 'home', component: ListComponent },
-  { path: 'login', component: LoginComponent },
-  { path: 'authenticated', component: AuthenticatedComponent },
-  { path: 'expired', component: LoginComponent },
+  { path: '', redirectTo: '/home', pathMatch: 'full' },
+  { path: 'home', component: HomeComponent, canActivate: [AuthGuard] },
+  { path: 'login', component: SecurityComponent, canActivate: [LoginGuard] },
 ];
 
 @NgModule({
   declarations: [
     AppComponent,
-    LoginComponent,
-    AuthenticatedComponent,
-    ListComponent
+    SecurityComponent,
+    ListComponent,
+    SessionsComponent,
+    HomeComponent
   ],
   imports: [
     BrowserModule,

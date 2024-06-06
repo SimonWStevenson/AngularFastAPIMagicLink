@@ -11,13 +11,14 @@ from . import database, config, emails
 def get_settings():
     return config.Settings()
 
-class User:
-    def __init__(self, id: int, email: str):
-        self.id = id
+class UserSession:
+    def __init__(self, user_id: int, session_id: int, email: str):
+        self.user_id = user_id
+        self.session_id = session_id
         self.email = email
 
 # Generate magic link and email it
-def login(email: str, settings: Annotated[config.Settings, Depends(get_settings)]):
+def login(email: str, settings):
     my_user = database.getUser(email)
     if not my_user:
         my_user = database.createUser(email)
@@ -34,7 +35,7 @@ def login(email: str, settings: Annotated[config.Settings, Depends(get_settings)
     return {"An email with a login link has been sent to " +  email}
 
 # Verify user token and supply session token
-def verify(request: Request, user_token: str, email: str, settings: Annotated[config.Settings, Depends(get_settings)]):
+def verify(request: Request, user_token: str, email: str, settings):
     user_agent = request.headers.get("user-agent")
     device_info = get_device_info(user_agent)
     try:
@@ -68,7 +69,7 @@ def verify(request: Request, user_token: str, email: str, settings: Annotated[co
                 settings.jwt_secret_key, 
                 algorithm="HS256"
             )
-            redirect_response = RedirectResponse(url=settings.website_url + "/authenticated")
+            redirect_response = RedirectResponse(url=settings.website_url + "/home")
             redirect_response.set_cookie(
                 key="session_token", 
                 value=session_token, 
@@ -86,7 +87,7 @@ def verify(request: Request, user_token: str, email: str, settings: Annotated[co
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
 # Authenticate every request
-def get_user(request: Request, settings: Annotated[config.Settings, Depends(get_settings)]) -> User:
+def get_user(request: Request, settings: Annotated[config.Settings, Depends(get_settings)]) -> UserSession:
     session_token = request.cookies.get("session_token")
     if not session_token:
         print("Session token not found in browser")
@@ -102,16 +103,31 @@ def get_user(request: Request, settings: Annotated[config.Settings, Depends(get_
 
     my_email = decoded_session_token['email']
     my_session_id = decoded_session_token['session_id']
-
     my_user_session = database.getSessionToken(email=my_email, session_id=my_session_id)
-    my_user_result = User(id=my_user_session.user_id, email=my_email)
     if my_user_session:
+        my_user_result = UserSession(user_id=my_user_session.user_id, session_id=my_user_session.id, email=my_email)
         return my_user_result
     else:
         print("Session token user not found")
         raise HTTPException(status_code=401, detail="Invalid credentials")
-    
-CurrentUser = Annotated[User, Depends(get_user)]
+
+CurrentUser = Annotated[UserSession, Depends(get_user)]
+
+def is_logged_in(request: Request, settings: Annotated[config.Settings, Depends(get_settings)]) -> bool:
+    session_token = request.cookies.get("session_token")
+    if not session_token:
+        return False
+
+    try:
+        decoded_session_token = jwt.decode(session_token, settings.jwt_secret_key, algorithms=["HS256"])
+    except (jwt.ExpiredSignatureError, jwt.InvalidTokenError):
+        return False
+
+    my_email = decoded_session_token['email']
+    my_session_id = decoded_session_token['session_id']
+    my_user_session = database.getSessionToken(email=my_email, session_id=my_session_id)
+    return bool(my_user_session)
+
 
 
 def get_device_info(user_agent: str) -> str:
